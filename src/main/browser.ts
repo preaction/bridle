@@ -43,6 +43,9 @@ export default class Browser {
     this.show();
   }
 
+  /**
+   * Navigate this browser to the given location.
+   */
   navigate(url: string) {
     this.webContents.loadURL(url);
   }
@@ -72,6 +75,10 @@ export default class Browser {
     }
   }
 
+  /**
+   * Resize the child view inside the window. This controls where the browser
+   * is placed inside the renderer's window.
+   */
   invalidateLayout() {
     const [width, height] = this.window.getSize();
     const padding = 4;
@@ -87,18 +94,11 @@ export default class Browser {
   startListeners() {
     this.stopListeners();
     this.window.on("resize", this.invalidateLayout.bind(this));
-    this.webContents.on("did-navigate", this.onNavigate.bind(this));
-    this.webContents.on(
-      "did-navigate-in-page",
-      this.onNavigateInPage.bind(this),
-    );
     this.webContents.on("dom-ready", this.onDomReady.bind(this));
   }
 
   stopListeners() {
     this.window.off("resize", this.invalidateLayout);
-    this.webContents.off("did-navigate", this.onNavigate);
-    this.webContents.off("did-navigate-in-page", this.onNavigateInPage);
     this.webContents.off("dom-ready", this.onDomReady);
   }
 
@@ -108,29 +108,17 @@ export default class Browser {
   ) {
     const responseHeaders = { ...details.responseHeaders };
 
-    // Delete the CSP headers to bypass restrictions
+    // Delete the CSP headers to bypass restrictions. This allows us to inject
+    // some of our own javascript, namely the Recorder class.
     delete responseHeaders["content-security-policy"];
     delete responseHeaders["Content-Security-Policy"];
 
-    // Alternatively, you can override it with your own lax policy:
+    // XXX: TODO: Instead maybe allow unsafe-inline only? Or, add the hashes of
+    // the exact code we need to execute in that context.
     // responseHeaders['Content-Security-Policy'] = ["script-src 'self' 'unsafe-eval' 'unsafe-inline'"]
 
     callback({ cancel: false, responseHeaders });
   }
-
-  onNavigate(
-    event: any,
-    url: string,
-    httpResponseCode: number,
-    httpStatusText: string,
-  ) {
-    console.log("navigated to", url);
-  }
-
-  onNavigateInPage(event: any, url: string) {
-    console.log("navigated (in-page) to", url);
-  }
-
   onDomReady() {
     // electron.startRecording comes from the inbrowser preload.
     this.webContents.executeJavaScript(

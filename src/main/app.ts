@@ -55,12 +55,22 @@ export default class AppWindow {
 
     // The browser window will send these events and then we
     // will forward them to the main UI renderer.
-    this.browser.webContents.ipc.on("record-step", this.recordStep.bind(this));
-    this.browser.webContents.ipc.on("navigate", this.navigate.bind(this));
+    this.browser.webContents.ipc.on("record-step", (_, step) =>
+      this.recordStep(step),
+    );
+    this.browser.webContents.on("did-navigate", (_, url: string) =>
+      this.updateLocation(url),
+    );
+    this.browser.webContents.on("did-navigate-in-page", (_, url: string) =>
+      this.updateLocation(url),
+    );
 
     // The main UI sends these events, and we will forward them
     // to the browser window.
-    mainContents.ipc.on("set-url", (event, url) => {
+    mainContents.ipc.on("set-url", (event, url: string) => {
+      if (!url.match(/^https?:\/\//)) {
+        url = "http://" + url;
+      }
       this.browser.navigate(url);
     });
 
@@ -81,7 +91,7 @@ export default class AppWindow {
     return attributes.find((attr) => attr.name === name);
   }
 
-  recordStep(event: IpcMainInvokeEvent, step: any) {
+  recordStep(step: any) {
     // First, find the element that we should consider interacted with. This is
     // an element with an ARIA role, either explicit or implicit.
     for (const el of step.stack) {
@@ -112,7 +122,7 @@ export default class AppWindow {
     this.webContents.send("step", step);
   }
 
-  navigate(event: IpcMainInvokeEvent, url: any) {
-    console.log("got navigation", url);
+  updateLocation(url: string) {
+    this.webContents.send("location", url);
   }
 }

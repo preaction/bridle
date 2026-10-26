@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld("electron", {
   onStep: (cb: (step: PlayducerStep) => void) => {
     ipcRenderer.on("step", (event, step) => cb(step));
   },
+  onLocation: (cb: (url: string) => void) => {
+    ipcRenderer.on("location", (event, url) => cb(url));
+  },
 });
