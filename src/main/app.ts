@@ -74,38 +74,38 @@ export default class AppWindow {
     this.session.setUserAgent(userAgent);
   }
 
+  findAttribute(
+    attributes: Array<{ name: string; value: string }>,
+    name: string,
+  ): { name: string; value: string } | undefined {
+    return attributes.find((attr) => attr.name === name);
+  }
+
   recordStep(event: IpcMainInvokeEvent, step: any) {
     // First, find the element that we should consider interacted with. This is
     // an element with an ARIA role, either explicit or implicit.
     for (const el of step.stack) {
-      let locator = (step.locator = { role: "", name: "" });
       console.log("examine stack frame", el);
-      if (el.attributes.filter((attr) => attr.name === "role").length) {
-        locator.role = el.attributes.filter(
-          (attr) => attr.name === "role",
-        )[0].value;
+      let locator = (step.locator = { role: "", name: "" });
+      const attrs = el.attributes;
+      const roleAttr = this.findAttribute(el.attributes, "role");
+      if (roleAttr) {
+        locator.role = roleAttr.value;
         locator.name = el.text;
       }
-      if (
-        el.name === "a" &&
-        el.attributes.filter((attr) => attr.name === "href").length
-      ) {
+      if (el.name === "a" && this.findAttribute(attrs, "href")) {
         locator.role = "link";
         locator.name = el.text;
         break;
       }
       if (el.name === "button") {
         locator.role = "button";
-        locator.name = el.attributes.filter(
-          (attr) => attr.name === "aria-label",
-        )[0].value;
+        locator.name = this.findAttribute(attrs, "aria-label") || el.text;
         break;
       }
       if (el.name === "input") {
         locator.role = "input";
-        locator.name = el.attributes.filter(
-          (attr) => attr.name === "aria-label",
-        )[0].value;
+        locator.name = this.findAttribute(attrs, "aria-label") || el.text;
         break;
       }
     }

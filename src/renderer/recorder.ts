@@ -6,6 +6,8 @@ export default {
     const stack = [];
     while (target) {
       if (target.tagName && target.attributes) {
+        // XXX TODO: Need to resolve `aria-labelledby` to get a label
+        // Likely should resolve all element references like that
         stack.push({
           name: target.tagName.toLowerCase(),
           text: target.innerText,
