@@ -1,3 +1,4 @@
+import { AriaAttributes } from "vue";
 import type { ElectronAPI } from "./renderer/preload.ts";
 
 declare global {
@@ -6,14 +7,36 @@ declare global {
   }
 }
 
-export type PlayducerStackFrame = {
+export type BridleStackFrame = {
   tagName: string;
-  role: string;
-  ariaName: string;
-  href: string;
+  attributes: Array<{ name: string; value: string }>;
+  text: string;
 };
 
-export type PlayducerStep = {
-  action: string;
-  stack: PlayducerStackFrame[];
+export type BridleLocator = {
+  role: ARIAMixin["role"];
+  name: string | RegExp;
 };
+
+export type BridleEvent =
+  | {
+      action: "open";
+      url: string;
+    }
+  | {
+      action: string;
+      stack: BridleStackFrame[];
+    };
+
+export type BridleStep =
+  | {
+      action: "open";
+      url: string;
+    }
+  | {
+      action: string;
+      locator: BridleLocator;
+    };
+
+{
+}

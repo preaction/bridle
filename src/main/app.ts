@@ -8,6 +8,7 @@ import {
   WebContents,
 } from "electron";
 import Browser from "./browser";
+import { BridleEvent } from "../types";
 
 const PATHS = {
   PRELOAD: path.join(__dirname, "../build/preload.cjs"),
@@ -55,8 +56,8 @@ export default class AppWindow {
 
     // The browser window will send these events and then we
     // will forward them to the main UI renderer.
-    this.browser.webContents.ipc.on("record-step", (_, step) =>
-      this.recordStep(step),
+    this.browser.webContents.ipc.on("record-event", (_, event: BridleEvent) =>
+      this.recordEvent(event),
     );
     this.browser.webContents.on("did-navigate", (_, url: string) =>
       this.updateLocation(url),
@@ -71,6 +72,10 @@ export default class AppWindow {
       if (!url.match(/^https?:\/\//)) {
         url = "http://" + url;
       }
+      this.recordEvent({
+        action: "open",
+        url,
+      });
       this.browser.navigate(url);
     });
 
@@ -91,35 +96,104 @@ export default class AppWindow {
     return attributes.find((attr) => attr.name === name);
   }
 
-  recordStep(step: any) {
-    // First, find the element that we should consider interacted with. This is
-    // an element with an ARIA role, either explicit or implicit.
-    for (const el of step.stack) {
-      console.log("examine stack frame", el);
-      let locator = (step.locator = { role: "", name: "" });
-      const attrs = el.attributes;
-      const roleAttr = this.findAttribute(el.attributes, "role");
-      if (roleAttr) {
-        locator.role = roleAttr.value;
-        locator.name = el.text;
-      }
-      if (el.name === "a" && this.findAttribute(attrs, "href")) {
-        locator.role = "link";
-        locator.name = el.text;
-        break;
-      }
-      if (el.name === "button") {
-        locator.role = "button";
-        locator.name = this.findAttribute(attrs, "aria-label") || el.text;
-        break;
-      }
-      if (el.name === "input") {
-        locator.role = "input";
-        locator.name = this.findAttribute(attrs, "aria-label") || el.text;
-        break;
-      }
+  recordEvent(event: BridleEvent) {
+    if (event.action === "open") {
+      this.webContents.send("step", event);
+      return;
     }
-    this.webContents.send("step", step);
+
+    if ("stack" in event && event.stack.length) {
+      const step = { action: event.action, locator: { role: "", name: "" } };
+      // First, find the element that we should consider interacted with. This is
+      // an element with an ARIA role, either explicit or implicit.
+      for (const el of event.stack) {
+        console.log("examine stack frame", el);
+        // Find a stack frame that declares a node in the accessibility tree.
+        // That is, an element that has a defined role and an accessibility name.
+        // XXX TODO: List all the frames that can be targeted so we can allow the user
+        // to disambiguate and/or change the frame being tested.
+        const attrs = el.attributes;
+        const roleAttr = this.findAttribute(el.attributes, "role");
+        const labelAttr = this.findAttribute(el.attributes, "aria-label");
+        if (roleAttr) {
+          step.locator.role = roleAttr.value;
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "a" && this.findAttribute(attrs, "href")) {
+          step.locator.role = "link";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "button") {
+          step.locator.role = "button";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "input" || el.tagName === "textarea") {
+          step.locator.role = "textbox";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "select") {
+          step.locator.role = "listbox";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "ul" || el.tagName === "ol") {
+          step.locator.role = "list";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "li") {
+          step.locator.role = "listitem";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "td") {
+          step.locator.role = "cell";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "article") {
+          step.locator.role = "article";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "p") {
+          step.locator.role = "paragraph";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "aside") {
+          step.locator.role = "complementary";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "nav") {
+          step.locator.role = "navigation";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "section") {
+          step.locator.role = "region";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "form") {
+          step.locator.role = "form";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        } else if (el.tagName === "hr") {
+          step.locator.role = "separator";
+          step.locator.name = labelAttr?.value || el.text;
+          console.log("located", step.locator);
+          break;
+        }
+      }
+      this.webContents.send("step", step);
+    }
   }
 
   updateLocation(url: string) {

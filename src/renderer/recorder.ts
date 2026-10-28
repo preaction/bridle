@@ -1,15 +1,16 @@
 import { ipcRenderer } from "electron/renderer";
+import { BridleStackFrame } from "../types";
 
 export default {
-  stackize(target: HTMLElement) {
+  stackize(target: HTMLElement): Array<BridleStackFrame> {
     // Get all the info we can, we'll sort it out later
-    const stack = [];
+    const stack: Array<BridleStackFrame> = [];
     while (target) {
       if (target.tagName && target.attributes) {
         // XXX TODO: Need to resolve `aria-labelledby` to get a label
         // Likely should resolve all element references like that
         stack.push({
-          name: target.tagName.toLowerCase(),
+          tagName: target.tagName.toLowerCase(),
           text: target.innerText,
           attributes: Array.from(target.attributes).map((el) => ({
             name: el.name,
@@ -25,7 +26,7 @@ export default {
     return stack;
   },
 
-  recordStep(
+  recordEvent(
     action: string,
     target: EventTarget,
     value: string | null = null,
@@ -39,7 +40,7 @@ export default {
       targetNode = targetNode.parentNode;
     }
     try {
-      ipcRenderer.send("record-step", {
+      ipcRenderer.send("record-event", {
         action,
         stack: this.stackize(targetNode),
         value: value
@@ -59,7 +60,7 @@ export default {
       "click",
       (e) => {
         console.log("record click");
-        this.recordStep("click", e.target);
+        this.recordEvent("click", e.target);
       },
       { capture: true },
     );
@@ -67,7 +68,7 @@ export default {
       "change",
       (e) => {
         console.log("record change");
-        this.recordStep("change", e.target);
+        this.recordEvent("change", e.target);
       },
       { capture: true },
     );
@@ -75,7 +76,31 @@ export default {
       "keypress",
       (e: KeyboardEvent) => {
         console.log("record keypress");
-        this.recordStep("keypress", e.target, e.key);
+        this.recordEvent("keypress", e.target, e.key);
+      },
+      { capture: true },
+    );
+    body.addEventListener(
+      "focus",
+      (e: FocusEvent) => {
+        console.log("record focus");
+        this.recordEvent("focus", e.target);
+      },
+      { capture: true },
+    );
+    body.addEventListener(
+      "blur",
+      (e: FocusEvent) => {
+        console.log("record blur");
+        this.recordEvent("focus", e.target);
+      },
+      { capture: true },
+    );
+    body.addEventListener(
+      "submit",
+      (e: SubmitEvent) => {
+        console.log("record submit");
+        this.recordEvent("submit", e.target);
       },
       { capture: true },
     );
